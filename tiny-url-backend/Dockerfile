@@ -1,20 +1,19 @@
-# Dockerfile
+# Dockerfile para el backend
 FROM node:16
 
-# Crear directorio de la aplicación
 WORKDIR /app
 
-# Copiar archivos package.json y package-lock.json
+# Copiar solo package.json y package-lock.json para instalar dependencias
 COPY package*.json ./
 
 # Instalar las dependencias
 RUN npm install
 
-# Copiar el resto de los archivos de la aplicación
+# Copiar los archivos de la aplicación
 COPY . .
 
-# Exponer el puerto 4000
+# Exponer el puerto
 EXPOSE 4000
 
-# Iniciar la aplicación
+# Ejecutar el servidor
 CMD ["node", "server.js"]
