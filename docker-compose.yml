@@ -9,7 +9,7 @@ services:
       - mongo-data:/data/db
 
   backend:
-    build: ./backend
+    build: ./tiny-url-backend
     container_name: tiny-url-backend
     ports:
       - '4000:4000'
@@ -17,6 +17,14 @@ services:
       - mongodb
     environment:
       - MONGO_URL=mongodb://mongodb:27017/tinyurl
+
+  frontend:
+    build: ./tiny-url-app
+    container_name: tiny-url-frontend
+    ports:
+      - '3000:3000'
+    depends_on:
+      - backend
 
 volumes:
   mongo-data:
