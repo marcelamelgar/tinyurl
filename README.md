@@ -18,7 +18,7 @@ Cada componente se ejecuta en su propio contenedor Docker y se orquesta utilizan
 Clona el repositorio en tu máquina local:
 
 ```bash
-git clone https://github.com/tu-usuario/tiny-url.git
+git clone https://github.com/tu-usuario/tinyurl.git
 cd tiny-url
 ```
 
