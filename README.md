@@ -17,15 +17,15 @@ Cada componente se ejecuta en su propio contenedor Docker y se orquesta utilizan
 ### 1. Clonar el Repositorio
 Clona el repositorio en tu máquina local:
 
-\`\`\`bash
+```bash
 git clone https://github.com/tu-usuario/tiny-url.git
 cd tiny-url
-\`\`\`
+```
 
 ### 2. Estructura del Proyecto
 Asegúrate de que la estructura del proyecto sea similar a la siguiente:
 
-\`\`\`
+```
 /tiny-url
 │
 ├── docker-compose.yml
@@ -38,20 +38,20 @@ Asegúrate de que la estructura del proyecto sea similar a la siguiente:
 │   ├── server.js
 │   └── ...              # Archivos del Backend
 └── ...
-\`\`\`
+```
 
 ### 3. Configurar Variables de Entorno en el Frontend
-El archivo \`.env\` en el directorio \`tiny-url-app\` ya debe estar configurado con la URL del backend:
+El archivo `.env` en el directorio `tiny-url-app` ya debe estar configurado con la URL del backend:
 
-\`\`\`env
+```env
 # tiny-url-app/.env
 REACT_APP_BACKEND_URL=http://backend:4000
-\`\`\`
+```
 
-### 4. Crear el \`docker-compose.yml\`
-El archivo \`docker-compose.yml\` ya debería estar en la raíz del proyecto. Asegúrate de que su contenido sea el siguiente:
+### 4. Crear el `docker-compose.yml`
+El archivo `docker-compose.yml` ya debería estar en la raíz del proyecto. Asegúrate de que su contenido sea el siguiente:
 
-\`\`\`yaml
+```yaml
 version: '3'
 services:
   mongodb:
@@ -82,66 +82,66 @@ services:
 
 volumes:
   mongo-data:
-\`\`\`
+```
 
 ### 5. Construir y Levantar los Contenedores
-Desde la raíz del proyecto (donde se encuentra \`docker-compose.yml\`), ejecuta el siguiente comando para construir y levantar todos los contenedores (frontend, backend y base de datos):
+Desde la raíz del proyecto (donde se encuentra `docker-compose.yml`), ejecuta el siguiente comando para construir y levantar todos los contenedores (frontend, backend y base de datos):
 
-\`\`\`bash
+```bash
 docker-compose up --build
-\`\`\`
+```
 
 Este comando realizará lo siguiente:
-- Construirá las imágenes Docker para el frontend y el backend utilizando los \`Dockerfile\` dentro de sus respectivos directorios (\`tiny-url-app\` y \`tiny-url-backend\`).
+- Construirá las imágenes Docker para el frontend y el backend utilizando los \`Dockerfile\` dentro de sus respectivos directorios (`tiny-url-app` y `tiny-url-backend`).
 - Creará y ejecutará los contenedores para MongoDB, el backend y el frontend.
-- El frontend se servirá en \`http://localhost:3000\`.
-- El backend estará accesible en \`http://localhost:4000\`.
+- El frontend se servirá en `http://localhost:3000`.
+- El backend estará accesible en `http://localhost:4000`.
 
 ### 6. Acceder a la Aplicación
 Una vez que los contenedores estén ejecutándose:
-- Abre tu navegador y visita \`http://localhost:3000\` para acceder a la aplicación "Tiny URL".
+- Abre tu navegador y visita `http://localhost:3000` para acceder a la aplicación "Tiny URL".
 - Puedes utilizar la interfaz para ingresar una URL, acortarla, editarla y eliminarla. Los cambios se reflejarán en la base de datos MongoDB en el contenedor correspondiente.
 
 ### 7. Detener los Contenedores
 Para detener los contenedores sin eliminarlos, usa el siguiente comando:
 
-\`\`\`bash
+```bash
 docker-compose stop
-\`\`\`
+```
 
 ### 8. Detener y Eliminar los Contenedores
 Para detener y eliminar todos los contenedores, redes y volúmenes creados por Docker Compose, utiliza:
 
-\`\`\`bash
+```bash
 docker-compose down
-\`\`\`
+```
 
 ### 9. Ver los Logs
 Para ver los registros de todos los contenedores, ejecuta:
 
-\`\`\`bash
+```bash
 docker-compose logs
-\`\`\`
+```
 
 Para ver los registros de un contenedor específico (por ejemplo, el backend):
 
-\`\`\`bash
+```bash
 docker-compose logs backend
-\`\`\`
+```
 
 ## Problemas Comunes
-- **Error de Conexión a MongoDB**: Si el backend no puede conectarse a MongoDB, asegúrate de que esté utilizando la URL \`mongodb://mongodb:27017/tinyurl\`. Esto se maneja mediante la variable de entorno \`MONGO_URL\` en \`docker-compose.yml\`.
-- **Frontend no se Comunica con el Backend**: Verifica que la URL del backend esté configurada correctamente en el archivo \`.env\` del frontend (\`REACT_APP_BACKEND_URL\`).
-- **Cambios no Reflejados**: Si realizas cambios en el código del frontend o backend, ejecuta \`docker-compose up --build\` para reconstruir las imágenes Docker.
+- **Error de Conexión a MongoDB**: Si el backend no puede conectarse a MongoDB, asegúrate de que esté utilizando la URL `mongodb://mongodb:27017/tinyurl`. Esto se maneja mediante la variable de entorno `MONGO_URL` en `docker-compose.yml`.
+- **Frontend no se Comunica con el Backend**: Verifica que la URL del backend esté configurada correctamente en el archivo `.env` del frontend (`REACT_APP_BACKEND_URL`).
+- **Cambios no Reflejados**: Si realizas cambios en el código del frontend o backend, ejecuta `docker-compose up --build` para reconstruir las imágenes Docker.
 
 ## Notas Adicionales
-- Puedes modificar los puertos en \`docker-compose.yml\` si es necesario.
+- Puedes modificar los puertos en `docker-compose.yml` si es necesario.
 - Asegúrate de que Docker esté en ejecución antes de levantar los contenedores.
-- Para acceder directamente a la base de datos, puedes usar un cliente de MongoDB en \`localhost:27017\`.
+- Para acceder directamente a la base de datos, puedes usar un cliente de MongoDB en `localhost:27017`.
 
 ## Estructura de Archivos
-- **Frontend (\`tiny-url-app/\`)**: Contiene el código de React para la interfaz web. Incluye un \`Dockerfile\` y un archivo \`.env\` para la URL del backend.
-- **Backend (\`tiny-url-backend/\`)**: Contiene el código del servidor Node.js con Express, las rutas API y la conexión a MongoDB. Incluye un \`Dockerfile\`.
+- **Frontend (`tiny-url-app/`)**: Contiene el código de React para la interfaz web. Incluye un `Dockerfile` y un archivo `.env` para la URL del backend.
+- **Backend (`tiny-url-backend/`)**: Contiene el código del servidor Node.js con Express, las rutas API y la conexión a MongoDB. Incluye un `Dockerfile`.
 
 ¡Ahora tu aplicación desacoplada debería estar lista para funcionar en un entorno Dockerizado! Sigue estos pasos para levantar, detener y administrar los contenedores de la aplicación.
 
