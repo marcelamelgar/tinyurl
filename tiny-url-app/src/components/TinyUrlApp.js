@@ -7,7 +7,7 @@ const TinyUrlApp = () => {
     const [shortUrls, setShortUrls] = useState([]);
 
     // URL base del backend, usando variable de entorno
-    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:4000';
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://3.84.203.164:4000';
 
     // Cargar las URLs acortadas al inicio
     useEffect(() => {
@@ -116,11 +116,11 @@ const TinyUrlApp = () => {
                                     <td>{urlObj.originalURL}</td>
                                     <td>
                                         <a
-                                            href={`http://localhost:4000/${urlObj.shortURL}`}
+                                            href={`http://3.84.203.164:4000/${urlObj.shortURL}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                         >
-                                            {`http://localhost:4000/${urlObj.shortURL}`}
+                                            {`http://3.84.203.164:4000/${urlObj.shortURL}`}
                                         </a>
                                     </td>
                                     <td>

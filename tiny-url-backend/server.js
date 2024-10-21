@@ -1,7 +1,8 @@
+// server.js
+
 const express = require('express');
 const AWS = require('aws-sdk');
 const cors = require('cors');
-const shortid = require('shortid');
 
 // Configuración de la aplicación
 const app = express();
@@ -17,11 +18,11 @@ const TABLE_NAME = 'TinyURLTable'; // Nombre de la tabla
 
 // Middleware
 const corsOptions = {
-    origin: '*', // Cambia a la URL del bucket si quieres restringir acceso
+    origin: '*', // Permitir cualquier origen durante las pruebas
     optionsSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
-app.use(express.json()); // Middleware para parsear JSON
+app.use(express.json());
 
 // Rutas
 // POST: Acortar una nueva URL
@@ -114,28 +115,29 @@ app.get('/:shortURL', async (req, res) => {
 
     const params = {
         TableName: TABLE_NAME,
-        FilterExpression: 'shortURL = :shortURL',
-        ExpressionAttributeValues: { ':shortURL': shortURL }
+        KeyConditionExpression: 'shortURL = :shortURL',
+        ExpressionAttributeValues: {
+            ':shortURL': shortURL,
+        },
     };
 
     try {
-        const data = await dynamoDB.scan(params).promise();
-
+        const data = await dynamoDB.query(params).promise();
         if (data.Items.length > 0) {
-            // Redirige a la URL original si se encuentra
-            res.redirect(data.Items[0].originalURL);
+            const originalUrl = data.Items[0].originalURL;
+            res.redirect(originalUrl);
         } else {
             res.status(404).json({ message: 'URL no encontrada' });
         }
     } catch (error) {
-        console.error('Error al redirigir a la URL:', error);
+        console.error('Error al redirigir:', error);
         res.status(500).json({ message: 'Error al redirigir a la URL', error: error.message });
     }
 });
 
 
 
-// Iniciar el servidor
-app.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+// Iniciar el servidor en todas las interfaces (0.0.0.0)
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Servidor corriendo en http://0.0.0.0:${PORT}`);
 });
