@@ -1,4 +1,5 @@
-# Tiny URL - Proyecto Desacoplado con Docker
+# Tiny URL
+# Proyecto Desacoplado con Docker (Fase 1)
 
 Este proyecto es una aplicación de "Tiny URL" que permite acortar URLs, almacenarlas y gestionarlas a través de una interfaz web. La aplicación está desarrollada con una arquitectura desacoplada, utilizando:
 - **Frontend**: React
@@ -144,5 +145,39 @@ docker-compose logs backend
 - **Backend (\`tiny-url-backend/\`)**: Contiene el código del servidor Node.js con Express, las rutas API y la conexión a MongoDB. Incluye un \`Dockerfile\`.
 
 ¡Ahora tu aplicación desacoplada debería estar lista para funcionar en un entorno Dockerizado! Sigue estos pasos para levantar, detener y administrar los contenedores de la aplicación.
+
+
+# Tiny URL - Componentes desplegado en AWS (Fase 2)
+
+Aqui se documenta los pasos realizados para la elaboración del proyecto Tiny URL durante la **fase 2**. El proyecto consta de un backend en Node.js con DynamoDB como base de datos, desplegado en EC2, y un frontend con React hospedado en S3.
+
+---
+
+## **Pasos realizados para la elaboración del proyecto**
+
+### **1. Configuración de la infraestructura en AWS**
+
+1. **Creación de una instancia EC2**:
+   - Usamos Amazon Linux 2 como SO.
+   - Se configuró el grupo de seguridad para permitir tráfico en los puertos **22** (SSH) y **4000** (backend).
+
+2. **Creación de una tabla en DynamoDB**:
+   - **Nombre de la tabla**: `TinyURLTable`.
+   - **Partition Key**: `shortURL` (String).
+   - **Sort Key**: `originalURL` (String).
+
+3. **Creación de un bucket en S3**:
+   - El bucket es público y se utiliza para servir el frontend.
+   - Se habilitó la opción de **Hosting estático** para el frontend.
+
+---
+
+### **2. Configuración del Backend**
+
+1. **Clonación del repositorio** y configuración del entorno:
+   ```bash
+   git clone <repositorio_url>
+   cd tiny-url-backend
+   npm install
 
 
