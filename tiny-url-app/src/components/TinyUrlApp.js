@@ -7,7 +7,7 @@ const TinyUrlApp = () => {
     const [shortUrls, setShortUrls] = useState([]);
 
     // URL base del backend, usando variable de entorno
-    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://3.84.203.164:4000';
+    const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://3.237.75.165:4000';
 
     // Cargar las URLs acortadas al inicio
     useEffect(() => {
