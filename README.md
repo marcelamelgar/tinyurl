@@ -1,148 +1,199 @@
-# Tiny URL - Proyecto Desacoplado con Docker
+# TinyURL Project - Deployment Guide
 
-Este proyecto es una aplicación de "Tiny URL" que permite acortar URLs, almacenarlas y gestionarlas a través de una interfaz web. La aplicación está desarrollada con una arquitectura desacoplada, utilizando:
-- **Frontend**: React
-- **Backend**: Node.js y Express
-- **Base de Datos**: MongoDB
+## Descripción del Proyecto
 
-Cada componente se ejecuta en su propio contenedor Docker y se orquesta utilizando Docker Compose.
+Este proyecto es una aplicación de acortador de URLs (TinyURL) que consiste en un frontend en React y un backend en Node.js con DynamoDB como base de datos. El frontend está alojado en un bucket de S3 configurado para alojamiento estático, mientras que el backend está desplegado en AWS ECS con Fargate.
 
 ## Requisitos Previos
-- **Docker** y **Docker Compose** deben estar instalados en tu máquina:
-  - [Instalar Docker](https://docs.docker.com/get-docker/)
-  - [Instalar Docker Compose](https://docs.docker.com/compose/install/)
 
-## Configuración del Proyecto
+1. **Cuenta de AWS** con acceso a los servicios S3, ECS, ECR, IAM, DynamoDB, y VPC.
+2. **AWS CLI** configurado localmente.
+3. **Docker** instalado en la máquina local.
+4. **Node.js** y **npm/yarn** para construir el frontend.
 
-### 1. Clonar el Repositorio
-Clona el repositorio en tu máquina local:
+## Pasos para Desplegar el Proyecto
 
-```bash
-git clone https://github.com/tu-usuario/tinyurl.git
-cd tiny-url
-```
+### 1. Configuración del Backend
 
-### 2. Estructura del Proyecto
-Asegúrate de que la estructura del proyecto sea similar a la siguiente:
+#### 1.1 Crear un Repositorio en Amazon ECR
+   1. Ve a **Amazon ECR** en la consola de AWS.
+   2. Selecciona **Create repository**.
+   3. Asigna el nombre `tinyurl-backend`.
+   4. Configura **Image tag mutability** en **Mutable** y usa la encriptación predeterminada con una clave administrada por AWS.
+   5. Haz clic en **Create repository** y guarda el URI del repositorio (te servirá más adelante).
 
-```
-/tiny-url
-│
-├── docker-compose.yml
-├── tiny-url-app/        # Carpeta del frontend
-│   ├── Dockerfile
-│   ├── .env
-│   └── ...              # Archivos de React
-├── tiny-url-backend/    # Carpeta del backend
-│   ├── Dockerfile
-│   ├── server.js
-│   └── ...              # Archivos del Backend
-└── ...
-```
+#### 1.2 Crear el Dockerfile para el Backend
+   - En la carpeta del backend, crea un archivo llamado `Dockerfile` con el siguiente contenido:
+     ```Dockerfile
+     FROM node:16
 
-### 3. Configurar Variables de Entorno en el Frontend
-El archivo `.env` en el directorio `tiny-url-app` ya debe estar configurado con la URL del backend:
+     WORKDIR /app
 
-```env
-# tiny-url-app/.env
-REACT_APP_BACKEND_URL=http://backend:4000
-```
+     COPY package*.json ./
+     RUN npm install
 
-### 4. Crear el `docker-compose.yml`
-El archivo `docker-compose.yml` ya debería estar en la raíz del proyecto. Asegúrate de que su contenido sea el siguiente:
+     COPY . .
 
-```yaml
-version: '3'
-services:
-  mongodb:
-    image: mongo
-    container_name: mongo-container
-    ports:
-      - '27017:27017'
-    volumes:
-      - mongo-data:/data/db
+     EXPOSE 4000
+     CMD ["node", "server.js"]
+     ```
 
-  backend:
-    build: ./tiny-url-backend
-    container_name: tiny-url-backend
-    ports:
-      - '4000:4000'
-    depends_on:
-      - mongodb
-    environment:
-      - MONGO_URL=mongodb://mongodb:27017/tinyurl
+#### 1.3 Construir y Subir la Imagen a ECR
+   - Autentícate en ECR:
+     ```bash
+     aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <account-id>.dkr.ecr.<region>.amazonaws.com
+     ```
+   - Construye y etiqueta la imagen:
+     ```bash
+     docker build -t tinyurl-backend .
+     docker tag tinyurl-backend:latest <account-id>.dkr.ecr.<region>.amazonaws.com/tinyurl-backend:latest
+     ```
+   - Sube la imagen a ECR:
+     ```bash
+     docker push <account-id>.dkr.ecr.<region>.amazonaws.com/tinyurl-backend:latest
+     ```
 
-  frontend:
-    build: ./tiny-url-app
-    container_name: tiny-url-frontend
-    ports:
-      - '3000:3000'
-    depends_on:
-      - backend
+#### 1.4 Crear una Tabla en DynamoDB
+   - Ve a **DynamoDB** en la consola de AWS.
+   - Haz clic en **Create table**.
+   - **Table name**: Ingresa `TinyURLTable`.
+   - **Partition key**: Ingresa `shortURL` como la clave de partición y selecciona **String** como tipo de dato.
+   - **Agregar Atributos Adicionales**:
+     - Después de crear la tabla, los atributos `originalURL` y `createdAt` se agregarán automáticamente cuando se inserten datos en la tabla.
+   - **Configuraciones Adicionales**: Deja las configuraciones predeterminadas y selecciona **Create table** para finalizar.
 
-volumes:
-  mongo-data:
-```
+#### 1.5 Configurar IAM para el Backend
+   - En **IAM**, crea un rol de IAM llamado `TinyURLBackendRole`.
+   - Agrega el permiso **AmazonDynamoDBFullAccess** al rol.
+   - En la pestaña **Trust relationships**, asegúrate de que el rol permita el servicio `ecs-tasks.amazonaws.com` para que ECS pueda usarlo:
+     ```json
+     {
+       "Version": "2012-10-17",
+       "Statement": [
+         {
+           "Effect": "Allow",
+           "Principal": {
+             "Service": "ecs-tasks.amazonaws.com"
+           },
+           "Action": "sts:AssumeRole"
+         }
+       ]
+     }
+     ```
 
-### 5. Construir y Levantar los Contenedores
-Desde la raíz del proyecto (donde se encuentra `docker-compose.yml`), ejecuta el siguiente comando para construir y levantar todos los contenedores (frontend, backend y base de datos):
+### 2. Desplegar el Backend en ECS con Fargate
 
-```bash
-docker-compose up --build
-```
+#### 2.1 Crear una VPC Pública en AWS
 
-Este comando realizará lo siguiente:
-- Construirá las imágenes Docker para el frontend y el backend utilizando los \`Dockerfile\` dentro de sus respectivos directorios (`tiny-url-app` y `tiny-url-backend`).
-- Creará y ejecutará los contenedores para MongoDB, el backend y el frontend.
-- El frontend se servirá en `http://localhost:3000`.
-- El backend estará accesible en `http://localhost:4000`.
+1. **Crear la VPC**:
+   - Ve a **VPC** en la consola de AWS.
+   - Selecciona **Your VPCs** y haz clic en **Create VPC**.
+   - Asigna el nombre `TinyURL-VPC`.
+   - Configura el **IPv4 CIDR block** como `10.0.0.0/16`.
+   - Haz clic en **Create VPC**.
 
-### 6. Acceder a la Aplicación
-Una vez que los contenedores estén ejecutándose:
-- Abre tu navegador y visita `http://localhost:3000` para acceder a la aplicación "Tiny URL".
-- Puedes utilizar la interfaz para ingresar una URL, acortarla, editarla y eliminarla. Los cambios se reflejarán en la base de datos MongoDB en el contenedor correspondiente.
+2. **Crear una Subnet Pública**:
+   - En el menú de la VPC, selecciona **Subnets** y haz clic en **Create subnet**.
+   - **VPC**: Selecciona `TinyURL-VPC`.
+   - **Subnet name**: Asigna el nombre `TinyURL-Subnet`.
+   - **Availability Zone**: Selecciona cualquier zona disponible.
+   - **IPv4 CIDR block**: Ingresa `10.0.1.0/24`.
+   - Haz clic en **Create subnet**.
+   - Después de crear la subnet, selecciona la opción **Actions** > **Modify auto-assign IP settings** y habilita **Auto-assign public IPv4 address**.
 
-### 7. Detener los Contenedores
-Para detener los contenedores sin eliminarlos, usa el siguiente comando:
+3. **Crear un Internet Gateway**:
+   - En el menú de la VPC, selecciona **Internet Gateways**.
+   - Haz clic en **Create internet gateway** y nómbralo `TinyURL-IGW`.
+   - Después de crear el gateway, selecciónalo y haz clic en **Attach to VPC**.
+   - Selecciona `TinyURL-VPC` y confirma.
 
-```bash
-docker-compose stop
-```
+4. **Actualizar la Tabla de Rutas**:
+   - En **Route Tables**, selecciona la tabla de rutas asociada a `TinyURL-VPC`.
+   - Ve a **Routes** y haz clic en **Edit routes**.
+   - Agrega la siguiente ruta:
+     - **Destination**: `0.0.0.0/0` (permitiendo acceso a internet).
+     - **Target**: Selecciona `TinyURL-IGW`.
+   - Guarda los cambios y asegúrate de que esta tabla de rutas esté asociada a la subnet `TinyURL-Subnet`.
 
-### 8. Detener y Eliminar los Contenedores
-Para detener y eliminar todos los contenedores, redes y volúmenes creados por Docker Compose, utiliza:
+#### 2.2 Crear un Cluster en ECS
 
-```bash
-docker-compose down
-```
+1. En **ECS**, selecciona **Clusters** y haz clic en **Create Cluster**.
+2. Selecciona **Networking only (Fargate)** y nombra el cluster `tinyurlCluster`.
+3. Haz clic en **Create** para finalizar.
 
-### 9. Ver los Logs
-Para ver los registros de todos los contenedores, ejecuta:
+#### 2.3 Crear la Task Definition
 
-```bash
-docker-compose logs
-```
+1. En **ECS**, ve a **Task Definitions** y selecciona **Create new Task Definition**.
+2. Selecciona **Fargate** y configura los detalles:
+   - **Task Role**: Selecciona `TinyURLBackendRole`.
+   - **Network Mode**: Deja `awsvpc`.
+3. **Container Definitions**:
+   - Nombre del contenedor: `tinyurl-backend`.
+   - **Image**: Usa la URI del repositorio en ECR.
+   - **Memory Limits**: Selecciona `0.5 GB`.
+   - **Port Mappings**: Configura el puerto 4000.
+4. **Task Size**:
+   - **CPU**: Selecciona `0.25 vCPU`.
+   - **Memory**: Selecciona `0.5 GB`.
+5. Haz clic en **Create** para guardar la Task Definition.
 
-Para ver los registros de un contenedor específico (por ejemplo, el backend):
+#### 2.4 Crear un Servicio en ECS
 
-```bash
-docker-compose logs backend
-```
+1. Ve al cluster `tinyurlCluster` y selecciona **Create Service**.
+2. Configura los siguientes detalles:
+   - **Launch type**: Selecciona **Fargate**.
+   - **Task Definition**: Selecciona la Task Definition `tinyurl-backend-task`.
+   - **Number of tasks**: Pon `1`.
+3. **Network configuration**:
+   - **VPC**: Selecciona `TinyURL-VPC`.
+   - **Subnets**: Selecciona `TinyURL-Subnet`.
+   - **Security Groups**: Crea un grupo de seguridad que permita tráfico HTTP en el puerto 4000.
+   - **Auto-assign public IP**: Asegúrate de que esté activado.
 
-## Problemas Comunes
-- **Error de Conexión a MongoDB**: Si el backend no puede conectarse a MongoDB, asegúrate de que esté utilizando la URL `mongodb://mongodb:27017/tinyurl`. Esto se maneja mediante la variable de entorno `MONGO_URL` en `docker-compose.yml`.
-- **Frontend no se Comunica con el Backend**: Verifica que la URL del backend esté configurada correctamente en el archivo `.env` del frontend (`REACT_APP_BACKEND_URL`).
-- **Cambios no Reflejados**: Si realizas cambios en el código del frontend o backend, ejecuta `docker-compose up --build` para reconstruir las imágenes Docker.
+### 3. Configuración del Frontend en S3
 
-## Notas Adicionales
-- Puedes modificar los puertos en `docker-compose.yml` si es necesario.
-- Asegúrate de que Docker esté en ejecución antes de levantar los contenedores.
-- Para acceder directamente a la base de datos, puedes usar un cliente de MongoDB en `localhost:27017`.
+#### 3.1 Configurar el Frontend
+   - Modifica el archivo de configuración del frontend para usar la URL pública del backend:
+     ```javascript
+     const API_BASE_URL = "http://<public-ip>:4000";
+     ```
 
-## Estructura de Archivos
-- **Frontend (`tiny-url-app/`)**: Contiene el código de React para la interfaz web. Incluye un `Dockerfile` y un archivo `.env` para la URL del backend.
-- **Backend (`tiny-url-backend/`)**: Contiene el código del servidor Node.js con Express, las rutas API y la conexión a MongoDB. Incluye un `Dockerfile`.
+#### 3.2 Build del Frontend
+   ```bash
+   npm install
+   npm run build
+  ```
 
-¡Ahora tu aplicación desacoplada debería estar lista para funcionar en un entorno Dockerizado! Sigue estos pasos para levantar, detener y administrar los contenedores de la aplicación.
+#### 3.3 Crear un Bucket en S3 y Subir Archivos
 
+1. Ve a **S3** y selecciona **Create bucket**.
+2. Ingresa un nombre único (por ejemplo, `tinyurl-frontend`) y desactiva **Block all public access**.
+3. Crea el bucket y, en **Properties**, habilita **Static website hosting** con `index.html`.
+4. Sube los archivos de la carpeta `build` generada en el paso de build.
 
+#### 3.4 Configurar Política de Acceso Público
+   - En la pestaña **Permissions**, agrega la siguiente política:
+     ```json
+     {
+       "Version": "2012-10-17",
+       "Statement": [
+         {
+           "Effect": "Allow",
+           "Principal": "*",
+           "Action": "s3:GetObject",
+           "Resource": "arn:aws:s3:::<bucket-name>/*"
+         }
+       ]
+     }
+     ```
+   - Reemplaza `<bucket-name>` con el nombre de tu bucket.
+   - Guarda la política.
+
+### 4. Probar la Aplicación
+
+1. **Probar el Backend**:
+   - Usa `http://<public-ip>:4000/api/urls` para verificar que el backend responde.
+
+2. **Probar el Frontend**:
+   - Accede a la URL del sitio web en S3 (disponible en **Static website hosting** en el bucket).
+   - Asegúrate de que las funcionalidades de acortar URLs y mostrar URLs acortadas funcionen correctamente.
