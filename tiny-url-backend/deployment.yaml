@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tinyurl-backend
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tinyurl-backend
+  template:
+    metadata:
+      labels:
+        app: tinyurl-backend
+    spec:
+      serviceAccountName: tinyurl-service-account  # Debe coincidir con la cuenta de servicio en GCP
+      containers:
+      - name: tinyurl-backend
+        image: gcr.io/tinyurl-440622/tinyurl-backend:latest
+        ports:
+        - containerPort: 4000
+        env:
+        - name: AWS_REGION
+          value: "us-east-1"
+        - name: AWS_SDK_LOAD_CONFIG
+          value: "1"
